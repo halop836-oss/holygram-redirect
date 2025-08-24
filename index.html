@@ -1,40 +1,194 @@
-// In your PostAdapter class, add WebDeepLinkManager
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HolyGram - Opening Post...</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+        }
+        
+        .container {
+            text-align: center;
+            max-width: 400px;
+            padding: 2rem;
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+        }
+        
+        .logo {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+        }
+        
+        .app-name {
+            font-size: 2rem;
+            font-weight: 700;
+            margin-bottom: 1rem;
+            background: linear-gradient(45deg, #ff6b6b, #4ecdc4);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        
+        .loading {
+            margin: 2rem 0;
+        }
+        
+        .spinner {
+            width: 40px;
+            height: 40px;
+            border: 4px solid rgba(255, 255, 255, 0.3);
+            border-top: 4px solid white;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .message {
+            margin-top: 1rem;
+            opacity: 0.8;
+        }
+        
+        .store-links {
+            margin-top: 2rem;
+            display: none;
+        }
+        
+        .store-button {
+            display: inline-block;
+            margin: 0.5rem;
+            padding: 0.75rem 1.5rem;
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+            text-decoration: none;
+            border-radius: 50px;
+            transition: all 0.3s ease;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+        }
+        
+        .store-button:hover {
+            background: rgba(255, 255, 255, 0.3);
+            transform: translateY(-2px);
+        }
+        
+        .error-message {
+            color: #ff6b6b;
+            margin-top: 1rem;
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="logo">📱</div>
+        <div class="app-name">HolyGram</div>
+        <div class="loading">
+            <div class="spinner"></div>
+            <div class="message">Opening post in app...</div>
+        </div>
+        <div class="store-links" id="storeLinks">
+            <p>Don't have HolyGram installed?</p>
+            <a href="https://play.google.com/store/apps/details?id=com.hkimi.holygram" class="store-button">
+                📱 Get on Google Play
+            </a>
+            <!-- Add Apple App Store link when available -->
+            <!-- <a href="#" class="store-button">📱 Get on App Store</a> -->
+        </div>
+        <div class="error-message" id="errorMessage">
+            Invalid link or post not found.
+        </div>
+    </div>
 
-public class PostAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
-    // ... existing code ...
-    
-    private DeepLinkManager deepLinkManager;
-    private WebDeepLinkManager webDeepLinkManager; // Add this
+    <script>
+        // Get post ID from URL parameter
+        function getPostIdFromUrl() {
+            const urlParams = new URLSearchParams(window.location.search);
+            return urlParams.get('p');
+        }
 
-    public PostAdapter(List<Post> postList, Context context) {
-        this.postList = postList;
-        this.context = context;
-        this.db = FirebaseFirestore.getInstance();
-        this.auth = FirebaseAuth.getInstance();
-        this.deepLinkManager = new DeepLinkManager(context);
-        this.webDeepLinkManager = new WebDeepLinkManager(context); // Add this
-    }
+        // Try to open the app
+        function openApp() {
+            const postId = getPostIdFromUrl();
+            
+            if (!postId) {
+                document.getElementById('errorMessage').style.display = 'block';
+                document.querySelector('.loading').style.display = 'none';
+                return;
+            }
 
-    // ... existing code ...
+            const deepLink = `holygram://post/${postId}`;
+            const fallbackUrl = window.location.href;
+            
+            // Try to open the deep link
+            const startTime = Date.now();
+            
+            // Create invisible iframe to trigger deep link
+            const iframe = document.createElement('iframe');
+            iframe.style.display = 'none';
+            iframe.src = deepLink;
+            document.body.appendChild(iframe);
+            
+            // Also try window.location for better compatibility
+            setTimeout(() => {
+                window.location.href = deepLink;
+            }, 100);
+            
+            // If app doesn't open in 3 seconds, show store links
+            setTimeout(() => {
+                // Check if we're still on the page (app didn't open)
+                if (Date.now() - startTime > 2500) {
+                    document.querySelector('.loading').style.display = 'none';
+                    document.getElementById('storeLinks').style.display = 'block';
+                }
+            }, 3000);
+            
+            // Clean up iframe
+            setTimeout(() => {
+                if (iframe.parentNode) {
+                    iframe.parentNode.removeChild(iframe);
+                }
+            }, 5000);
+        }
 
-    // In your showBottomSheet method, update the menuShare click listener:
-    LinearLayout menuShare = currentBottomSheetView.findViewById(R.id.menuShare);
-    if (menuShare != null) {
-        menuShare.setOnClickListener(view -> {
-            // Use web deep link manager to copy to clipboard
-            webDeepLinkManager.copyWebLinkToClipboard(post);
-            hideBottomSheet();
+        // Run when page loads
+        document.addEventListener('DOMContentLoaded', function() {
+            // Add some delay for better UX
+            setTimeout(openApp, 1000);
         });
-    }
 
-    // Also update the "Copy link" functionality if you have it:
-    LinearLayout menuCopyLink = currentBottomSheetView.findViewById(R.id.menuCopyLink);
-    if (menuCopyLink != null) {
-        menuCopyLink.setOnClickListener(view -> {
-            webDeepLinkManager.copyWebLinkToClipboard(post);
-            hideBottomSheet();
+        // Handle page visibility change (when user returns from app)
+        document.addEventListener('visibilitychange', function() {
+            if (document.visibilityState === 'visible') {
+                // User came back, probably app didn't open
+                setTimeout(() => {
+                    if (document.querySelector('.loading').style.display !== 'none') {
+                        document.querySelector('.loading').style.display = 'none';
+                        document.getElementById('storeLinks').style.display = 'block';
+                    }
+                }, 1000);
+            }
         });
-    }
-
-    // ... rest of your existing code ...
-}
+    </script>
+</body>
+</html>
