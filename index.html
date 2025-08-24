@@ -1,0 +1,40 @@
+// In your PostAdapter class, add WebDeepLinkManager
+
+public class PostAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
+    // ... existing code ...
+    
+    private DeepLinkManager deepLinkManager;
+    private WebDeepLinkManager webDeepLinkManager; // Add this
+
+    public PostAdapter(List<Post> postList, Context context) {
+        this.postList = postList;
+        this.context = context;
+        this.db = FirebaseFirestore.getInstance();
+        this.auth = FirebaseAuth.getInstance();
+        this.deepLinkManager = new DeepLinkManager(context);
+        this.webDeepLinkManager = new WebDeepLinkManager(context); // Add this
+    }
+
+    // ... existing code ...
+
+    // In your showBottomSheet method, update the menuShare click listener:
+    LinearLayout menuShare = currentBottomSheetView.findViewById(R.id.menuShare);
+    if (menuShare != null) {
+        menuShare.setOnClickListener(view -> {
+            // Use web deep link manager to copy to clipboard
+            webDeepLinkManager.copyWebLinkToClipboard(post);
+            hideBottomSheet();
+        });
+    }
+
+    // Also update the "Copy link" functionality if you have it:
+    LinearLayout menuCopyLink = currentBottomSheetView.findViewById(R.id.menuCopyLink);
+    if (menuCopyLink != null) {
+        menuCopyLink.setOnClickListener(view -> {
+            webDeepLinkManager.copyWebLinkToClipboard(post);
+            hideBottomSheet();
+        });
+    }
+
+    // ... rest of your existing code ...
+}
